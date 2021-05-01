@@ -33,7 +33,6 @@ case class Parser[T1](parseFn: String => ParserResult[T1]):
     }
   }
 
-
 object Parser:
   sealed trait ParserResult[A] {
     def isFailure = this match {
@@ -51,6 +50,28 @@ object Parser:
 
   def pure[A](a: A): Parser[A] = Parser(str => Success(a, str))
   def failure[A](msg: String): Parser[A] = Parser(str => Failure(msg))
+  def ap[T1, T2](fP: Parser[T1 => T2])(xP: Parser[T1]): Parser[T2] =
+    for
+      f <- fP
+      x <- xP
+    yield f(x)
+
+  def lift2[T1, T2, T3](f: T1 => T2 => T3)(first: Parser[T1])(second: Parser[T2]): Parser[T3] = {
+    for
+      f <- Parser.pure(f)
+      x <- first
+      y <- second
+    yield f(x)(y)
+  }
+
+  def sequence[T](parsers: List[Parser[T]]): Parser[List[T]] = {
+    def cons(head: T)(tail: List[T]) = head :: tail
+    def consP = lift2(cons)
+    parsers match {
+      case head :: tail => consP(head)(sequence(tail))
+      case Nil => Parser.pure(Nil)
+    }
+  }
 
   def choice[T](parsers: Seq[Parser[T]]): Parser[T] = parsers.reduce(_ orElse _)
 
@@ -61,3 +82,5 @@ object Parser:
     else if str(0) == charToMatch then Success(charToMatch, str.substring(1))
     else Failure(s"Expecting $charToMatch, found ${str(0)}")
   }
+
+  def stringParser(str: String): Parser[String] = sequence(str.toList.map(charParser)).map(_.mkString(""))

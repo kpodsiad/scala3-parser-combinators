@@ -43,6 +43,21 @@ class ParserTests:
     assert(aAndThenBorCParser.parse("AAA").isFailure)
   }
 
+  @Test def tupleParser(): Unit = {
+    val digitParser = anyOf('0' to '9')
+
+    val threeDigitAsStringParser = (digitParser andThen digitParser andThen digitParser).map {
+      case ((first, second), third) => s"$first$second$third"
+    }
+
+    assert(threeDigitAsStringParser.parse("123") == ParserResult.success("123", ""))
+    assert(threeDigitAsStringParser.parse("1234") == ParserResult.success("123", "4"))
+    assert(threeDigitAsStringParser.parse("a123").isFailure)
+
+    val threeDigitAsIntParser = threeDigitAsStringParser.map(_.toInt)
+    assert(threeDigitAsIntParser.parse("123") == ParserResult.success(123, ""))
+  }
+
   @Test def anyOfTest(): Unit = {
     val lowercaseParser = anyOf('a' to 'z')
     val digitParser = anyOf('0' to '9')
@@ -54,4 +69,21 @@ class ParserTests:
 
     assert(digitParser.parse("123") == ParserResult.success('1', "23"))
     assert(digitParser.parse("a23").isFailure)
+  }
+
+  @Test def sequenceTest(): Unit = {
+    val parsers = List(charParser('A'), charParser('G'), charParser('H'))
+    val aghParser = sequence(parsers)
+
+    assert(aghParser.parse("AGH") == ParserResult.success(List('A', 'G', 'H'), ""))
+    assert(aghParser.parse("AGH123") == ParserResult.success(List('A', 'G', 'H'), "123"))
+    assert(aghParser.parse("UJ").isFailure)
+  }
+
+  @Test def stringParserTest(): Unit = {
+    val aghParser = stringParser("AGH")
+
+    assert(aghParser.parse("AGH") == ParserResult.success("AGH", ""))
+    assert(aghParser.parse("AGH123") == ParserResult.success("AGH", "123"))
+    assert(aghParser.parse("UJ").isFailure)
   }
