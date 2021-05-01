@@ -1,8 +1,10 @@
 package me.kpodsiad.parserCombinators
 
-import me.kpodsiad.parserCombinators.Parser.{ParserResult, Success, Failure}
+import me.kpodsiad.parserCombinators.Parser.{Failure, ParserResult, Success, pure}
 
 case class Parser[T1](parseFn: String => ParserResult[T1]):
+  private val self = this
+
   def parse(str: String): ParserResult[T1] = this.parseFn(str)
 
   def map[T2](f: T1 => T2): Parser[T2] = Parser { str =>
@@ -18,6 +20,13 @@ case class Parser[T1](parseFn: String => ParserResult[T1]):
     }
   }
 
+  def andThen[T2](next: Parser[T2]): Parser[(T1, T2)] =
+    for
+      parsed1 <- self
+      parsed2 <- next
+    yield (parsed1, parsed2)
+
+
 object Parser:
   sealed trait ParserResult[A] {
     def isFailure = this match {
@@ -30,9 +39,11 @@ object Parser:
 
   object ParserResult:
     def success[A](parsed: A, remaining: String) = Success(parsed, remaining)
+
     def failure[A](msg: String) = Failure(msg)
 
   def pure[A](a: A): Parser[A] = Parser(str => Success(a, str))
+
   def failure[A](msg: String): Parser[A] = Parser(str => Failure(msg))
 
   def charParser(charToMatch: Char): Parser[Char] = Parser { str =>
