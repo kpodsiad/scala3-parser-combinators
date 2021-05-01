@@ -33,6 +33,9 @@ case class Parser[T1](parseFn: String => ParserResult[T1]):
     }
   }
 
+  def discardLeft[T2](right: Parser[T2]): Parser[T2] = this.andThen(right).map { case(t1, t2) => t2 }
+  def discardRight[T2](right: Parser[T2]): Parser[T1] = this.andThen(right).map { case(t1, t2) => t1 }
+
 object Parser:
   sealed trait ParserResult[A] {
     def isFailure = this match {
@@ -58,7 +61,7 @@ object Parser:
 
   def lift2[T1, T2, T3](f: T1 => T2 => T3)(first: Parser[T1])(second: Parser[T2]): Parser[T3] =
     for
-      f <- Parser.pure(f)
+      f <- pure(f)
       x <- first
       y <- second
     yield f(x)(y)
@@ -68,7 +71,7 @@ object Parser:
     def consP = lift2(cons)
     parsers match {
       case head :: tail => consP(head)(sequence(tail))
-      case Nil => Parser.pure(Nil)
+      case Nil => pure(Nil)
     }
 
   def choice[T](parsers: Seq[Parser[T]]): Parser[T] = parsers.reduce(_ orElse _)
@@ -97,7 +100,16 @@ object Parser:
     }
   }
 
-  def opt[T](parser: Parser[T]): Parser[Option[T]] = parser.map(Some(_)) orElse Parser.pure(None)
+  def opt[T](parser: Parser[T]): Parser[Option[T]] = parser.map(Some(_)) orElse pure(None)
+
+  def between[T1, T2, T3](p1: Parser[T1])(p2: Parser[T2])(p3: Parser[T3]): Parser[T2] =
+    p1.discardLeft(p2).discardRight(p3)
+
+  def separatedBy1[T1, T2](parser: Parser[T1])(separator: Parser[T2]): Parser[List[T1]] =
+    parser.andThen(many(separator.discardLeft(parser))).map { case (head, tail) => head :: tail }
+
+  def separatedBy[T1, T2](parser: Parser[T1])(separator: Parser[T2]): Parser[List[T1]] =
+    separatedBy1(parser)(separator) orElse pure(Nil)
 
   def charParser(charToMatch: Char): Parser[Char] = Parser { str =>
     if str.length == 0 then Failure("No more input")
@@ -109,7 +121,7 @@ object Parser:
 
   val intParser: Parser[Int] =
     val digit = anyOf('0' to '9')
-    (opt(charParser('-')) andThen many1(digit).map(_.mkString("").toInt)).map { case (sign, int) =>
+    opt(charParser('-')).andThen(many1(digit).map(_.mkString("").toInt)).map { case (sign, int) =>
       sign.fold(int)(_ => -int)
     }
 

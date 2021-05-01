@@ -123,3 +123,22 @@ class ParserTests:
     assert(intParser.parse("-1234") == ParserResult.success(-1234, ""))
     assert(intParser.parse("-1234G") == ParserResult.success(-1234, "G"))
   }
+
+  @Test def betweenTest(): Unit = {
+    val quote = charParser('"')
+    val quotedInt = between(quote)(intParser)(quote)
+
+    assert(quotedInt.parse("\"1234\"") == ParserResult.success(1234, ""))
+    assert(quotedInt.parse("\"1234\"A") == ParserResult.success(1234, "A"))
+    assert(quotedInt.parse("\"-123\"4") == ParserResult.success(-123, "4"))
+    assert(quotedInt.parse("\"-123\"4G") == ParserResult.success(-123, "4G"))
+  }
+
+  @Test def separatedTest(): Unit = {
+    val sep = charParser(',')
+    val start = charParser('[')
+    val end = charParser(']')
+    val list = between(start)(separatedBy(intParser)(sep))(end)
+
+    assert(list.parse("[1,2,-997]") == ParserResult.success(List(1,2,-997), ""))
+  }
