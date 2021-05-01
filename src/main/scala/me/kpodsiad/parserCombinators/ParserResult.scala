@@ -1,8 +1,8 @@
 package me.kpodsiad.parserCombinators
-
-import me.kpodsiad.parserCombinators.Parser.{Failure, ParserResult, Success, pure}
+import Parser.ParserResult
 
 case class Parser[T1](parseFn: String => ParserResult[T1]):
+  import Parser._
   private val self = this
 
   def parse(str: String): ParserResult[T1] = this.parseFn(str)
@@ -50,8 +50,11 @@ object Parser:
     def failure[A](msg: String) = Failure(msg)
 
   def pure[A](a: A): Parser[A] = Parser(str => Success(a, str))
-
   def failure[A](msg: String): Parser[A] = Parser(str => Failure(msg))
+
+  def choice[T](parsers: Seq[Parser[T]]): Parser[T] = parsers.reduce(_ orElse _)
+
+  def anyOf(chars: Seq[Char]): Parser[Char] = choice(chars.map(charParser))
 
   def charParser(charToMatch: Char): Parser[Char] = Parser { str =>
     if str.length == 0 then Failure("No more input")
