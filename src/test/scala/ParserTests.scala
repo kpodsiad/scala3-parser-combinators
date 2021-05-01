@@ -87,3 +87,39 @@ class ParserTests:
     assert(aghParser.parse("AGH123") == ParserResult.success("AGH", "123"))
     assert(aghParser.parse("UJ").isFailure)
   }
+
+  @Test def manyTest(): Unit = {
+    val aManyParser = many(charParser('A'))
+    assert(aManyParser.parse("AAAB") == ParserResult.success(List('A', 'A', 'A'), "B"))
+    assert(aManyParser.parse("ABAB") == ParserResult.success(List('A'), "BAB"))
+
+    val abMany = many(stringParser("AGH"))
+    assert(abMany.parse("_AGH") == ParserResult.success(Nil, "_AGH"))
+    assert(abMany.parse("AGHAGH") == ParserResult.success(List("AGH", "AGH"), ""))
+    assert(abMany.parse("AGH_AGH") == ParserResult.success(List("AGH"), "_AGH"))
+
+    val whitespaceParser = many(anyOf(List(' ', '\t', '\n')))
+    assert(whitespaceParser.parse("") == ParserResult.success(Nil, ""))
+    assert(whitespaceParser.parse(" ") == ParserResult.success(List(' '), ""))
+    assert(whitespaceParser.parse(" \t \n") == ParserResult.success(List(' ', '\t', ' ', '\n'), ""))
+  }
+
+  @Test def many1Test(): Unit = {
+    val abMany = many1(stringParser("AGH"))
+    assert(abMany.parse("_AGH").isFailure)
+    assert(abMany.parse("AGH_AGH") == ParserResult.success(List("AGH"), "_AGH"))
+    assert(abMany.parse("AGHAGH") == ParserResult.success(List("AGH", "AGH"), ""))
+  }
+
+  @Test def optTest(): Unit = {
+    val digitAndOptSemicolon = anyOf('0' to '9') andThen opt(charParser(';'))
+    assert(digitAndOptSemicolon.parse("1;") == ParserResult.success(('1', Some(';')), ""))
+    assert(digitAndOptSemicolon.parse("1") == ParserResult.success(('1', None), ""))
+  }
+
+  @Test def intTest(): Unit = {
+    assert(intParser.parse("1234") == ParserResult.success(1234, ""))
+    assert(intParser.parse("1234A") == ParserResult.success(1234, "A"))
+    assert(intParser.parse("-1234") == ParserResult.success(-1234, ""))
+    assert(intParser.parse("-1234G") == ParserResult.success(-1234, "G"))
+  }
