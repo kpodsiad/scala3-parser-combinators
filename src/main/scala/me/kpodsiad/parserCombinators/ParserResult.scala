@@ -7,11 +7,7 @@ case class Parser[T1](parseFn: String => ParserResult[T1]):
 
   def parse(str: String): ParserResult[T1] = this.parseFn(str)
 
-  def map[T2](f: T1 => T2): Parser[T2] = Parser { str =>
-    this.flatMap { value =>
-      Parser.pure(f(value))
-    }.parse(str)
-  }
+  def map[T2](f: T1 => T2): Parser[T2] = this.flatMap(value => Parser.pure(f(value)) )
 
   def flatMap[T2](f: T1 => Parser[T2]): Parser[T2] = Parser { str =>
     this.parseFn(str) match {
@@ -25,6 +21,17 @@ case class Parser[T1](parseFn: String => ParserResult[T1]):
       parsed1 <- self
       parsed2 <- next
     yield (parsed1, parsed2)
+
+  def orElse[T2](other: Parser[T2]): Parser[T1 | T2] = Parser { str =>
+    this.parse(str) match {
+      case Success(parsed, remaining) => Success(parsed, remaining)
+      case Failure(msg) =>
+        other.parse(str) match {
+          case Success(parsed, remaining) => Success(parsed, remaining)
+          case Failure(msg) => Failure(msg)
+        }
+    }
+  }
 
 
 object Parser:
