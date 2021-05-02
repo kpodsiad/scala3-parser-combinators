@@ -44,7 +44,7 @@ class ParserTests:
   }
 
   @Test def tupleParser(): Unit = {
-    val digitParser = anyOf('0' to '9')
+    val digitParser = digit
 
     val threeDigitAsStringParser = (digitParser andThen digitParser andThen digitParser).map {
       case ((first, second), third) => s"$first$second$third"
@@ -60,7 +60,7 @@ class ParserTests:
 
   @Test def anyOfTest(): Unit = {
     val lowercaseParser = anyOf('a' to 'z')
-    val digitParser = anyOf('0' to '9')
+    val digitParser = digit
 
     assert(lowercaseParser.parse("aGH") == ParserResult.success('a', "GH"))
     assert(lowercaseParser.parse("gHA") == ParserResult.success('g', "HA"))
@@ -98,7 +98,7 @@ class ParserTests:
     assert(abMany.parse("AGHAGH") == ParserResult.success(List("AGH", "AGH"), ""))
     assert(abMany.parse("AGH_AGH") == ParserResult.success(List("AGH"), "_AGH"))
 
-    val whitespaceParser = many(anyOf(List(' ', '\t', '\n')))
+    val whitespaceParser = many(whitespace)
     assert(whitespaceParser.parse("") == ParserResult.success(Nil, ""))
     assert(whitespaceParser.parse(" ") == ParserResult.success(List(' '), ""))
     assert(whitespaceParser.parse(" \t \n") == ParserResult.success(List(' ', '\t', ' ', '\n'), ""))
@@ -112,7 +112,7 @@ class ParserTests:
   }
 
   @Test def optTest(): Unit = {
-    val digitAndOptSemicolon = anyOf('0' to '9') andThen opt(charParser(';'))
+    val digitAndOptSemicolon = digit andThen opt(charParser(';'))
     assert(digitAndOptSemicolon.parse("1;") == ParserResult.success(('1', Some(';')), ""))
     assert(digitAndOptSemicolon.parse("1") == ParserResult.success(('1', None), ""))
   }
